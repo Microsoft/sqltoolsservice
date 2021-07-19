@@ -11,6 +11,7 @@ namespace Microsoft.SqlTools.ServiceLayer.Migration.Contracts
     public class MigrationAssessmentsParams 
     {
         public string OwnerUri { get; set; }
+        public string[] Databases { get; set; }
     }
 
     public class MigrationAssessmentResult

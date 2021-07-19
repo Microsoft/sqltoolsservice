@@ -134,12 +134,18 @@ namespace Microsoft.SqlTools.ServiceLayer.Migration
                     Version = Version.Parse(serverInfo.ServerVersion),
                     Platform = hostInfo.Platform
                 };
-
-                var db = SqlAssessmentService.GetDatabaseLocator(server, connection.Database);
-                var connectionString = ConnectionService.BuildConnectionString(connInfo.ConnectionDetails);
-
-                var results = await GetAssessmentItems(connectionString);
-                await requestContext.SendResult(results);
+                var connectionStrings = new List<string>();
+                if (parameters.Databases != null) 
+                {
+                    foreach (string database in parameters.Databases)
+                    {
+                        connInfo.ConnectionDetails.DatabaseName = database;
+                        connectionStrings.Add(ConnectionService.BuildConnectionString(connInfo.ConnectionDetails));
+                    }
+                    string[] assessmentConnectionStrings = connectionStrings.ToArray();
+                    var results = await GetAssessmentItems(assessmentConnectionStrings);
+                    await requestContext.SendResult(results);
+                }
             }
             catch (Exception e)
             {
@@ -179,12 +185,12 @@ namespace Microsoft.SqlTools.ServiceLayer.Migration
             }
         }
 
-        internal async Task<MigrationAssessmentResult> GetAssessmentItems(string connectionString)
+        internal async Task<MigrationAssessmentResult> GetAssessmentItems(string[] connectionStrings)
         {
             SqlAssessmentConfiguration.EnableLocalLogging = true;
             SqlAssessmentConfiguration.EnableReportCreation = true;
             SqlAssessmentConfiguration.AssessmentReportAndLogsRootFolderPath = Path.GetDirectoryName(Logger.LogFileFullPath);
-            DmaEngine engine = new DmaEngine(connectionString);
+            DmaEngine engine = new DmaEngine(connectionStrings);
             var assessmentResults = await engine.GetTargetAssessmentResultsList();
             Dictionary<string, ISqlMigrationAssessmentResult> assessmentResultLookup = new Dictionary<string, ISqlMigrationAssessmentResult>();
             foreach (ISqlMigrationAssessmentResult r in assessmentResults)
